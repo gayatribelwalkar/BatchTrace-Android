@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.VisibilityOff
 
 @Composable
 fun LoginScreen(
+    isLoading: Boolean = false,
     onLoginClick: (email: String, password: String) -> Unit = { _, _ -> }
 ) {
     var email by remember {
@@ -236,7 +237,8 @@ fun LoginScreen(
                         password
                     )
                 }
-            }
+            },
+            isLoading = isLoading
         )
 
         Spacer(
