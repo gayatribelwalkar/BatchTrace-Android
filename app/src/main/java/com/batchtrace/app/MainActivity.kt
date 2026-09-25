@@ -9,8 +9,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.batchtrace.app.data.model.UserRole
+import com.batchtrace.app.ui.admin.AdminDashboardScreen
 import com.batchtrace.app.ui.auth.LoginScreen
+import com.batchtrace.app.ui.production.ProductionDashboardScreen
+import com.batchtrace.app.ui.quality.QualityDashboardScreen
 import com.batchtrace.app.ui.theme.BatchTraceTheme
+import com.batchtrace.app.ui.warehouse.WarehouseDashboardScreen
 import com.batchtrace.app.viewmodel.AuthUiState
 import com.batchtrace.app.viewmodel.AuthViewModel
 
@@ -30,39 +35,79 @@ class MainActivity : ComponentActivity() {
                     .collectAsStateWithLifecycle()
 
                 LaunchedEffect(authState) {
-                    when (val state = authState) {
+                    if (authState is AuthUiState.Error) {
+                        val message =
+                            (authState as AuthUiState.Error).message
 
-                        is AuthUiState.Success -> {
-                            Toast.makeText(
-                                this@MainActivity,
-                                "Welcome ${state.user.name} (${state.user.role})",
-                                Toast.LENGTH_LONG
-                            ).show()
-                        }
+                        Toast.makeText(
+                            this@MainActivity,
+                            message,
+                            Toast.LENGTH_LONG
+                        ).show()
 
-                        is AuthUiState.Error -> {
-                            Toast.makeText(
-                                this@MainActivity,
-                                state.message,
-                                Toast.LENGTH_LONG
-                            ).show()
-
-                            authViewModel.clearError()
-                        }
-
-                        else -> Unit
+                        authViewModel.clearError()
                     }
                 }
 
-                LoginScreen(
-                    isLoading = authState is AuthUiState.Loading,
-                    onLoginClick = { email, password ->
-                        authViewModel.login(
-                            email = email,
-                            password = password
+                when (val state = authState) {
+
+                    is AuthUiState.Success -> {
+
+                        when (state.user.getUserRole()) {
+
+                            UserRole.ADMIN -> {
+                                AdminDashboardScreen(
+                                    user = state.user,
+                                    onLogout = {
+                                        authViewModel.logout()
+                                    }
+                                )
+                            }
+
+                            UserRole.PRODUCTION -> {
+                                ProductionDashboardScreen(
+                                    user = state.user,
+                                    onLogout = {
+                                        authViewModel.logout()
+                                    }
+                                )
+                            }
+
+                            UserRole.QUALITY -> {
+                                QualityDashboardScreen(
+                                    user = state.user,
+                                    onLogout = {
+                                        authViewModel.logout()
+                                    }
+                                )
+                            }
+
+                            UserRole.WAREHOUSE -> {
+                                WarehouseDashboardScreen(
+                                    user = state.user,
+                                    onLogout = {
+                                        authViewModel.logout()
+                                    }
+                                )
+                            }
+
+                            null -> {
+                                LoginScreen(
+                                    isLoading = false,
+                                    onLoginClick = authViewModel::login
+                                )
+                            }
+                        }
+                    }
+
+                    else -> {
+                        LoginScreen(
+                            isLoading =
+                                state is AuthUiState.Loading,
+                            onLoginClick = authViewModel::login
                         )
                     }
-                )
+                }
             }
         }
     }
