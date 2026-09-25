@@ -12,9 +12,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.batchtrace.app.data.model.Batch
 import com.batchtrace.app.data.model.UserRole
 import com.batchtrace.app.ui.admin.AdminDashboardScreen
 import com.batchtrace.app.ui.auth.LoginScreen
+import com.batchtrace.app.ui.batch.BatchDetailScreen
 import com.batchtrace.app.ui.batch.BatchListScreen
 import com.batchtrace.app.ui.batch.CreateBatchScreen
 import com.batchtrace.app.ui.production.ProductionDashboardScreen
@@ -28,7 +30,8 @@ import com.batchtrace.app.viewmodel.BatchViewModel
 private enum class AppScreen {
     DASHBOARD,
     CREATE_BATCH,
-    BATCH_LIST
+    BATCH_LIST,
+    BATCH_DETAIL
 }
 
 class MainActivity : ComponentActivity() {
@@ -39,10 +42,14 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
+
             BatchTraceTheme {
 
-                val authViewModel: AuthViewModel = viewModel()
-                val batchViewModel: BatchViewModel = viewModel()
+                val authViewModel: AuthViewModel =
+                    viewModel()
+
+                val batchViewModel: BatchViewModel =
+                    viewModel()
 
                 val authState by authViewModel.authState
                     .collectAsStateWithLifecycle()
@@ -51,19 +58,23 @@ class MainActivity : ComponentActivity() {
                     .collectAsStateWithLifecycle()
 
                 var currentScreen by remember {
-                    mutableStateOf(AppScreen.DASHBOARD)
+                    mutableStateOf(
+                        AppScreen.DASHBOARD
+                    )
+                }
+
+                var selectedBatch by remember {
+                    mutableStateOf<Batch?>(null)
                 }
 
                 LaunchedEffect(authState) {
-                    if (authState is AuthUiState.Error) {
 
-                        val message =
-                            (authState as AuthUiState.Error)
-                                .message
+                    if (authState is AuthUiState.Error) {
 
                         Toast.makeText(
                             this@MainActivity,
-                            message,
+                            (authState as AuthUiState.Error)
+                                .message,
                             Toast.LENGTH_LONG
                         ).show()
 
@@ -74,13 +85,12 @@ class MainActivity : ComponentActivity() {
                 LaunchedEffect(
                     batchState.errorMessage
                 ) {
-                    val message =
-                        batchState.errorMessage
 
-                    if (message != null) {
+                    batchState.errorMessage?.let {
+
                         Toast.makeText(
                             this@MainActivity,
-                            message,
+                            it,
                             Toast.LENGTH_LONG
                         ).show()
 
@@ -89,8 +99,31 @@ class MainActivity : ComponentActivity() {
                 }
 
                 LaunchedEffect(
+                    batchState.operationMessage
+                ) {
+
+                    batchState.operationMessage?.let {
+
+                        Toast.makeText(
+                            this@MainActivity,
+                            it,
+                            Toast.LENGTH_LONG
+                        ).show()
+
+                        batchViewModel
+                            .consumeOperationMessage()
+
+                        selectedBatch = null
+
+                        currentScreen =
+                            AppScreen.BATCH_LIST
+                    }
+                }
+
+                LaunchedEffect(
                     batchState.batchCreated
                 ) {
+
                     if (batchState.batchCreated) {
 
                         Toast.makeText(
@@ -134,21 +167,16 @@ class MainActivity : ComponentActivity() {
                                             unit,
                                             manufacturingDate ->
 
-                                        batchViewModel.createBatch(
-                                            batchNumber =
+                                        batchViewModel
+                                            .createBatch(
                                                 batchNumber,
-                                            productName =
                                                 productName,
-                                            productCode =
                                                 productCode,
-                                            quantity =
                                                 quantity,
-                                            unit =
                                                 unit,
-                                            manufacturingDate =
                                                 manufacturingDate,
-                                            user = state.user
-                                        )
+                                                state.user
+                                            )
                                     }
                                 )
                             }
@@ -165,8 +193,55 @@ class MainActivity : ComponentActivity() {
                                     onBack = {
                                         currentScreen =
                                             AppScreen.DASHBOARD
+                                    },
+
+                                    onBatchClick = {
+                                        selectedBatch = it
+                                        currentScreen =
+                                            AppScreen.BATCH_DETAIL
                                     }
                                 )
+                            }
+
+                            AppScreen.BATCH_DETAIL -> {
+
+                                selectedBatch?.let { batch ->
+
+                                    BatchDetailScreen(
+                                        batch = batch,
+                                        user = state.user,
+                                        isLoading =
+                                            batchState.isLoading,
+
+                                        onBack = {
+                                            currentScreen =
+                                                AppScreen.BATCH_LIST
+                                        },
+
+                                        onUpdateStatus = {
+                                                newStatus,
+                                                remarks,
+                                                location,
+                                                dispatchReference ->
+
+                                            batchViewModel
+                                                .updateStatus(
+                                                    batch =
+                                                        batch,
+                                                    newStatus =
+                                                        newStatus,
+                                                    user =
+                                                        state.user,
+                                                    qualityRemarks =
+                                                        remarks,
+                                                    warehouseLocation =
+                                                        location,
+                                                    dispatchReference =
+                                                        dispatchReference
+                                                )
+                                        }
+                                    )
+                                }
                             }
 
                             AppScreen.DASHBOARD -> {
@@ -231,6 +306,14 @@ class MainActivity : ComponentActivity() {
                                                 currentScreen =
                                                     AppScreen.DASHBOARD
                                                 authViewModel.logout()
+                                            },
+
+                                            onInspections = {
+                                                batchViewModel
+                                                    .loadBatches()
+
+                                                currentScreen =
+                                                    AppScreen.BATCH_LIST
                                             }
                                         )
                                     }
@@ -267,7 +350,6 @@ class MainActivity : ComponentActivity() {
                         LoginScreen(
                             isLoading =
                                 state is AuthUiState.Loading,
-
                             onLoginClick =
                                 authViewModel::login
                         )

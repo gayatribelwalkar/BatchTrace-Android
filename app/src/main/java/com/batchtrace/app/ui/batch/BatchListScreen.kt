@@ -1,5 +1,6 @@
 package com.batchtrace.app.ui.batch
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -32,7 +33,8 @@ import com.batchtrace.app.ui.components.BatchStatusChip
 fun BatchListScreen(
     batches: List<Batch>,
     isLoading: Boolean,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onBatchClick: (Batch) -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -87,17 +89,9 @@ fun BatchListScreen(
                     Arrangement.Center
             ) {
                 Text(
-                    text = "No batches created yet.",
+                    "No batches available.",
                     style =
                         MaterialTheme.typography.titleMedium
-                )
-
-                Text(
-                    text =
-                        "Create your first manufacturing batch from the Admin Dashboard.",
-                    modifier = Modifier.padding(top = 8.dp),
-                    color =
-                        MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
@@ -111,12 +105,18 @@ fun BatchListScreen(
                 verticalArrangement =
                     Arrangement.spacedBy(12.dp)
             ) {
+
                 items(
                     items = batches,
                     key = { it.id }
                 ) { batch ->
 
-                    BatchCard(batch)
+                    BatchCard(
+                        batch = batch,
+                        onClick = {
+                            onBatchClick(batch)
+                        }
+                    )
                 }
             }
         }
@@ -125,15 +125,19 @@ fun BatchListScreen(
 
 @Composable
 private fun BatchCard(
-    batch: Batch
+    batch: Batch,
+    onClick: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(
             containerColor =
                 MaterialTheme.colorScheme.surface
         )
     ) {
+
         Column(
             modifier = Modifier.padding(18.dp),
             verticalArrangement =
@@ -141,36 +145,39 @@ private fun BatchCard(
         ) {
 
             Text(
-                text = batch.batchNumber,
-                style = MaterialTheme.typography.titleMedium
+                batch.batchNumber,
+                style =
+                    MaterialTheme.typography.titleMedium
             )
 
             Text(
-                text = batch.productName,
-                style = MaterialTheme.typography.bodyLarge
+                batch.productName,
+                style =
+                    MaterialTheme.typography.bodyLarge
             )
 
             Text(
-                text = "Product Code: ${batch.productCode}",
+                "Product Code: ${batch.productCode}",
                 color =
                     MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Text(
-                text = "Quantity: ${batch.quantity} ${batch.unit}",
-                color =
-                    MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Text(
-                text =
-                    "Manufactured: ${batch.manufacturingDate}",
+                "Quantity: ${batch.quantity} ${batch.unit}",
                 color =
                     MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             BatchStatusChip(
                 status = batch.status
+            )
+
+            Text(
+                text = "Tap to view details",
+                style =
+                    MaterialTheme.typography.labelMedium,
+                color =
+                    MaterialTheme.colorScheme.primary
             )
         }
     }
